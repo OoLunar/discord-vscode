@@ -15,7 +15,7 @@ import {
 	VSCODE_INSIDERS_IMAGE_KEY,
 } from './constants';
 import { log, LogLevel } from './logger';
-import { getConfig, getGit, resolveFileIcon, toLower, toTitle, toUpper } from './util';
+import { getConfig, getGit, resolveFileIconAsync, toLower, toTitle, toUpper } from './util';
 
 interface ActivityPayload {
 	details?: string | undefined;
@@ -118,11 +118,8 @@ async function details(idling: CONFIG_KEYS, editing: CONFIG_KEYS, debugging: CON
 		const workspaceFolder = workspace.getWorkspaceFolder(window.activeTextEditor.document.uri);
 		const workspaceFolderName = workspaceFolder?.name ?? noWorkspaceFound;
 		const workspaceName = workspace.name?.replace(REPLACE_KEYS.VSCodeWorkspace, EMPTY) ?? workspaceFolderName;
-		const workspaceAndFolder = `${workspaceName}${
-			workspaceFolderName === FAKE_EMPTY ? '' : ` - ${workspaceFolderName}`
-		}`;
-
-		const fileIcon = resolveFileIcon(window.activeTextEditor.document);
+		const workspaceAndFolder = `${workspaceName}${workspaceFolderName === FAKE_EMPTY ? '' : ` - ${workspaceFolderName}`}`;
+		const fileIcon = await resolveFileIconAsync(window.activeTextEditor.document);
 
 		if (debug.activeDebugSession) {
 			raw = config[debugging] as string;
@@ -164,8 +161,8 @@ export async function activity(previous: ActivityPayload = {}) {
 	const defaultSmallImageKey = debug.activeDebugSession
 		? DEBUG_IMAGE_KEY
 		: appName.includes('Insiders')
-		? VSCODE_INSIDERS_IMAGE_KEY
-		: VSCODE_IMAGE_KEY;
+			? VSCODE_INSIDERS_IMAGE_KEY
+			: VSCODE_IMAGE_KEY;
 	const defaultSmallImageText = config[CONFIG_KEYS.SmallImage].replace(REPLACE_KEYS.AppName, appName);
 	const defaultLargeImageText = config[CONFIG_KEYS.LargeImageIdling];
 	const removeDetails = config[CONFIG_KEYS.RemoveDetails];
@@ -213,7 +210,7 @@ export async function activity(previous: ActivityPayload = {}) {
 	}
 
 	if (window.activeTextEditor) {
-		const largeImageKey = resolveFileIcon(window.activeTextEditor.document);
+		const largeImageKey = await resolveFileIconAsync(window.activeTextEditor.document);
 		const largeImageText = config[CONFIG_KEYS.LargeImage]
 			.replace(REPLACE_KEYS.LanguageLowerCase, toLower(largeImageKey))
 			.replace(REPLACE_KEYS.LanguageTitleCase, toTitle(largeImageKey))
@@ -228,10 +225,10 @@ export async function activity(previous: ActivityPayload = {}) {
 			state: removeLowerDetails
 				? undefined
 				: await details(
-						CONFIG_KEYS.LowerDetailsIdling,
-						CONFIG_KEYS.LowerDetailsEditing,
-						CONFIG_KEYS.LowerDetailsDebugging,
-				  ),
+					CONFIG_KEYS.LowerDetailsIdling,
+					CONFIG_KEYS.LowerDetailsEditing,
+					CONFIG_KEYS.LowerDetailsDebugging,
+				),
 		};
 
 		if (swapBigAndSmallImage) {
